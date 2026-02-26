@@ -1,96 +1,66 @@
 package duoc.controlador;
 
-import duoc.conexion.ConexionBD;
+import duoc.dao.ProductoDAO;
+import duoc.dao.impl.ProductoDAOImpl;
 import duoc.modelo.Producto;
 
-import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.util.List;
 
 public class ControladorProductos {
 
-    public void cargarProductosDesdeBD(DefaultTableModel model) {
-        String sql = "SELECT id, nombre, categoria, stock, valor FROM productos";
+    private final ProductoDAO productoDAO = new ProductoDAOImpl();
 
-        try (Connection conn = ConexionBD.obtenerConexion();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+    public void agregarProducto(String nombre, int idCategoria, int stock, int valor) {
+        if (nombre == null || nombre.trim().isEmpty())
+            throw new IllegalArgumentException("Nombre obligatorio.");
 
-            model.setRowCount(0);
+        if (stock <= 0) throw new IllegalArgumentException("Stock debe ser > 0.");
+        if (valor <= 0) throw new IllegalArgumentException("Valor debe ser > 0.");
 
-            while (rs.next()) {
-                model.addRow(new Object[]{
-                        rs.getInt("id"),
-                        rs.getString("nombre"),
-                        rs.getString("categoria"),
-                        rs.getInt("stock"),
-                        rs.getInt("valor")
-                });
-            }
+        Producto p = new Producto();
+        p.setNombre(nombre.trim());
+        p.setIdCategoria(idCategoria);
+        p.setStock(stock);
+        p.setValor(valor);
 
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error al cargar productos desde la BD.");
-        }
+        productoDAO.insertar(p);
     }
 
-    public void agregarProducto(Producto producto, DefaultTableModel model) {
-        String sql = "INSERT INTO productos (nombre, categoria, stock, valor) VALUES (?, ?, ?, ?)";
+    public void actualizarProducto(int id, String nombre, int idCategoria, int stock, int valor) {
+        if (id <= 0) throw new IllegalArgumentException("ID inválido.");
+        if (nombre == null || nombre.trim().isEmpty())
+            throw new IllegalArgumentException("Nombre obligatorio.");
 
-        try (Connection conn = ConexionBD.obtenerConexion();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        Producto p = new Producto();
+        p.setId(id);
+        p.setNombre(nombre.trim());
+        p.setIdCategoria(idCategoria);
+        p.setStock(stock);
+        p.setValor(valor);
 
-            stmt.setString(1, producto.getNombre());
-            stmt.setString(2, producto.getCategoria());
-            stmt.setInt(3, producto.getStock());
-            stmt.setInt(4, producto.getValor());
-
-            stmt.executeUpdate();
-            cargarProductosDesdeBD(model);
-
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error al agregar producto en la BD.");
-        }
+        productoDAO.actualizar(p);
     }
 
-    public void editarProducto(int id, Producto producto, DefaultTableModel model) {
-        String sql = "UPDATE productos SET nombre=?, categoria=?, stock=?, valor=? WHERE id=?";
-
-        try (Connection conn = ConexionBD.obtenerConexion();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, producto.getNombre());
-            stmt.setString(2, producto.getCategoria());
-            stmt.setInt(3, producto.getStock());
-            stmt.setInt(4, producto.getValor());
-            stmt.setInt(5, id);
-
-            stmt.executeUpdate();
-            cargarProductosDesdeBD(model);
-
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error al editar el producto en la BD.");
-        }
+    public void eliminarProductoPorId(int id) {
+        if (id <= 0) throw new IllegalArgumentException("ID inválido.");
+        productoDAO.eliminar(id);
     }
 
-    public void eliminarProducto(int id, DefaultTableModel model) {
-        String sql = "DELETE FROM productos WHERE id=?";
+    public List<Producto> listarProductos() {
+        return productoDAO.listarTodos();
+    }
 
-        try (Connection conn = ConexionBD.obtenerConexion();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-            cargarProductosDesdeBD(model);
-
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error al eliminar el producto en la BD.");
+    public void cargarTabla(DefaultTableModel modelo) {
+        modelo.setRowCount(0);
+        for (Producto p : listarProductos()) {
+            modelo.addRow(new Object[]{
+                    p.getId(),
+                    p.getNombre(),
+                    p.getNombreCategoria(),
+                    p.getStock(),
+                    p.getValor()
+            });
         }
     }
 }

@@ -2,29 +2,29 @@ package duoc.vista;
 
 import duoc.controlador.ControladorUsuarios;
 import duoc.modelo.Usuario;
+import duoc.util.Seguridad;
 
 import javax.swing.*;
 import java.awt.*;
 
 public class Login extends JFrame {
 
-    private final JTextField txtUsuario = new JTextField(15);
-    private final JPasswordField txtPass = new JPasswordField(15);
+    private final JTextField txtCorreo = new JTextField(18);
+    private final JPasswordField txtPass = new JPasswordField(18);
     private final JButton btnAcceder = new JButton("Acceder");
-    private final JButton btnCancelar = new JButton("Cancelar");
-    private final ControladorUsuarios controladorUsuarios;
+    private final JButton btnSalir = new JButton("Salir");
 
-    public Login(ControladorUsuarios controladorUsuarios){
-        this.controladorUsuarios = controladorUsuarios;
+    private final ControladorUsuarios controladorUsuarios = new ControladorUsuarios();
 
-        setTitle("Login Verduleria al paso");
+    public Login() {
+        setTitle("Login - Tienda Verduras (DAO)");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(360, 220);
+        setSize(380, 220);
         setLocationRelativeTo(null);
         setResizable(false);
 
         setContentPane(crearPanel());
-        enlazarEventos();
+        enlazar();
     }
 
     private JPanel crearPanel() {
@@ -32,38 +32,43 @@ public class Login extends JFrame {
         root.setBorder(BorderFactory.createEmptyBorder(15,15,15,15));
 
         JPanel form = new JPanel(new GridLayout(2,2,8,8));
-        form.add(new JLabel("Usuario"));
-        form.add(txtUsuario);
-        form.add(new JLabel("Contraseña"));
+        form.add(new JLabel("Correo:"));
+        form.add(txtCorreo);
+        form.add(new JLabel("Contraseña:"));
         form.add(txtPass);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         actions.add(btnAcceder);
-        actions.add(btnCancelar);
+        actions.add(btnSalir);
 
         root.add(form, BorderLayout.CENTER);
         root.add(actions, BorderLayout.SOUTH);
-
         return root;
     }
 
-    private void enlazarEventos() {
-        btnAcceder.addActionListener(e -> autenticarUsuario());
-        btnCancelar.addActionListener(e -> System.exit(0));
+    private void enlazar() {
+        btnAcceder.addActionListener(e -> autenticar());
+        btnSalir.addActionListener(e -> System.exit(0));
     }
 
-    private void autenticarUsuario(){
-        String nombre = txtUsuario.getText().trim();
+    private void autenticar() {
+        String correo = txtCorreo.getText().trim();
         String pass = new String(txtPass.getPassword());
 
-        Usuario usuario = controladorUsuarios.autenticar(nombre, pass);
+        if (correo.isEmpty() || pass.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Completa correo y contraseña.");
+            return;
+        }
 
-        if(usuario != null){
-            JOptionPane.showMessageDialog(this, "Bienvenido, rol: " + usuario.getRol());
-            new TiendaVerduras(usuario.getRol()).setVisible(true);
+        String passHash = Seguridad.sha256Hex(pass);
+        Usuario u = controladorUsuarios.autenticar(correo, passHash);
+
+        if (u != null) {
+            JOptionPane.showMessageDialog(this, "Bienvenido: " + u.getNombre() + " (" + u.getRol() + ")");
+            new TiendaVerduras(u.getRol()).setVisible(true);
             dispose();
-        }else{
-            JOptionPane.showMessageDialog(this, "Usuario o contraseña incorrectos");
+        } else {
+            JOptionPane.showMessageDialog(this, "Credenciales inválidas o usuario inactivo.");
         }
     }
 }
